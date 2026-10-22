@@ -117,6 +117,8 @@ namespace ImGui {
     }
 }
 EOF
+
+  cp "$startdir/patch/"*.cpp src/psmoveservice/Platform/
 }
 
 build() {
@@ -153,4 +155,4 @@ EOF
   if [ -d "${pkgname%-git}/misc/linux/udev" ]; then
     install -Dm644 "${pkgname%-git}/misc/linux/udev/"*.rules -t "${pkgdir}/usr/lib/udev/rules.d/"
   fi
-}
+} 
