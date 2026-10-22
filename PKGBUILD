@@ -99,6 +99,10 @@ prepare() {
   sed -i '1s|^|#ifndef _WIN32\nstruct { void OpenConfigInExplorer() {} } configExec;\n#endif\n|' src/psmoveconfigtool/AppStage_AdvancedSettings.cpp
   sed -i -E 's/(target_link_libraries\s*\(\s*PSMoveConfigTool\b[^)]*)/\1 boost_filesystem/' src/psmoveconfigtool/CMakeLists.txt
 
+  # Unikalne, nieucięte ścieżki USB w libusb (naprawa pomijania kamer)
+  sed -i '1s|^|#include <string>\n|' src/psmoveservice/Device/USB/LibUSBApi.cpp
+  perl -0777 -i -pe 's/ServerUtility::format_string\(outBuffer, bufferSize, "b%d", bus_id\);.*?bSuccess = false;\s*break;\s*\}\s*\}\s*\}/if (port_count > 0) {\n\t\t\tstd::string p = "b" + std::to_string(bus_id);\n\t\t\tfor (int port_index = 0; port_index < port_count; ++port_index) {\n\t\t\t\tif (port_index == 0) p += "_p" + std::to_string(port_numbers[port_index]);\n\t\t\t\telse p += "." + std::to_string(port_numbers[port_index]);\n\t\t\t}\n\t\t\tstrncpy(outBuffer, p.c_str(), bufferSize - 1);\n\t\t\toutBuffer[bufferSize - 1] = 0;\n\t\t\tbSuccess = true;\n\t\t}/s' src/psmoveservice/Device/USB/LibUSBApi.cpp
+
   cat << 'EOF' >> thirdparty/imgui/imgui.h
 namespace ImGui {
     inline bool ButtonChecked(const char* label, bool checked, const ImVec2& size = ImVec2(0, 0)) {
