@@ -22,3 +22,22 @@ Designed for headless Linux servers or standard PC running PS3 Eye cameras.
 git clone <repo-url>
 cd <repo-dir>
 makepkg -srci
+```
+
+---
+
+## Bluetooth Configuration (PS Move v1)
+
+PS Move v1 controllers (PS3 era) connect via unencrypted HID and do not support modern PIN/SSP bonding. Modern BlueZ blocks these connections by default (CVE-2023-45866 mitigation).
+**Warning! This could allow malicious people to send keyboard or mouse presses within BT range, know what you are doing and DO NOT leave your BT adapter in discoverable state**
+
+To allow connections, set `ClassicBondedOnly=false` in `/etc/bluetooth/input.conf`:
+
+```ini
+[General]
+ClassicBondedOnly=false
+```
+
+## Known Issues & Planned Improvements (TODO)
+
+- **Non-root Bluetooth Pairing:** Writing device profiles to `/var/lib/bluetooth/` currently requires elevated privileges. A dedicated helper script (`sudoers` / `polkit`) or other solution is planned to handle this transparently for non-root users.

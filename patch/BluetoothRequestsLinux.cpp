@@ -20,6 +20,8 @@
 #include <cstdio>
 #include <cstring>
 #include <assert.h>
+#include <fstream>
+#include <filesystem>
 
 // -- constants ----
 static const char *k_invalid_bluetooth_host = "00:00:00:00:00:00";
@@ -97,11 +99,77 @@ static void bluez_remove_device(const std::string &mac)
     run_cmd_output("bluetoothctl remove " + to_upper_mac(mac) + " 2>&1", out);
 }
 
-static void bluez_setup_adapter()
+static bool bluez_setup_adapter()
 {
     std::string out;
+    run_cmd_output("bluetoothctl show 2>&1", out);
+    bool was_discoverable = (out.find("Discoverable: yes") != std::string::npos);
+
     run_cmd_output("bluetoothctl power on 2>&1", out);
     run_cmd_output("bluetoothctl pairable on 2>&1", out);
+    run_cmd_output("bluetoothctl discoverable on 2>&1", out);
+
+    return was_discoverable;
+}
+
+static void bluez_restore_adapter(bool was_discoverable)
+{
+    std::string out;
+    if (!was_discoverable)
+    {
+        run_cmd_output("bluetoothctl discoverable off 2>&1", out);
+    }
+}
+
+static bool bluez_provision_device_info(const std::string &host_mac, const std::string &dev_mac)
+{
+    if (!is_valid_mac(host_mac) || !is_valid_mac(dev_mac))
+    {
+        return false;
+    }
+
+    const std::string host_upper = to_upper_mac(host_mac);
+    const std::string dev_upper = to_upper_mac(dev_mac);
+    const std::string dir_path = "/var/lib/bluetooth/" + host_upper + "/" + dev_upper;
+    const std::string file_path = dir_path + "/info";
+
+    std::error_code ec;
+    std::filesystem::create_directories(dir_path, ec);
+    if (ec)
+    {
+        SERVER_LOG_ERROR("BlueZ") << "Failed to create directory: " << dir_path << " (" << ec.message() << ")";
+        return false;
+    }
+
+    std::ofstream info_file(file_path, std::ios::trunc);
+    if (!info_file.is_open())
+    {
+        SERVER_LOG_ERROR("BlueZ") << "Failed to write device info: " << file_path;
+        return false;
+    }
+
+    info_file << "# Generated automatically by PSMoveService for PS Move HID pairing\n";
+    info_file << "# Remove or unpair via PSMoveConfigTool\n";
+    info_file << "[General]\n";
+    info_file << "Name=Motion Controller\n";
+    info_file << "Class=0x002508\n";
+    info_file << "SupportedTechnologies=BR/EDR;\n";
+    info_file << "Trusted=true\n";
+    info_file << "Blocked=false\n";
+    info_file << "Services=00001124-0000-1000-8000-00805f9b34fb;\n";
+    info_file.close();
+
+    return true;
+}
+
+static void bluez_cleanup_device_dir(const std::string &host_mac, const std::string &dev_mac)
+{
+    if (is_valid_mac(host_mac) && is_valid_mac(dev_mac))
+    {
+        const std::string dir_path = "/var/lib/bluetooth/" + to_upper_mac(host_mac) + "/" + to_upper_mac(dev_mac);
+        std::error_code ec;
+        std::filesystem::remove_all(dir_path, ec);
+    }
 }
 
 // -- definitions -----
@@ -337,6 +405,12 @@ static void AsyncBluetoothUnpairDeviceThreadFunction(BluetoothUnpairDeviceState 
 
     bluez_remove_device(mac);
 
+    std::string host_mac;
+    if (bluetooth_get_host_address(host_mac))
+    {
+        bluez_cleanup_device_dir(host_mac, mac);
+    }
+
     state->setSubStatus_WorkerThread(BluetoothUnpairDeviceState::success);
 }
 
@@ -484,7 +558,9 @@ static void AsyncBluetoothPairDeviceThreadFunction(BluetoothPairDeviceState *sta
 {
     state->worker_thread_id = std::this_thread::get_id();
     const std::string mac = state->controller_serial_string;
+    const std::string host_mac = state->host_address_string;
     bool isCompleted = false;
+    bool was_discoverable = false;
 
     state->setSubStatus_WorkerThread(BluetoothPairDeviceState::setupBluetoothRadio);
 
@@ -500,8 +576,9 @@ static void AsyncBluetoothPairDeviceThreadFunction(BluetoothPairDeviceState *sta
             {
             case BluetoothPairDeviceState::setupBluetoothRadio:
                 {
-                    SERVER_MT_LOG_INFO("AsyncBluetoothPairDeviceRequest") << "Configuring BlueZ adapter and pre-trusting " << mac;
-                    bluez_setup_adapter();
+                    SERVER_MT_LOG_INFO("AsyncBluetoothPairDeviceRequest") << "Configuring BlueZ adapter and provisioning " << mac;
+                    was_discoverable = bluez_setup_adapter();
+                    bluez_provision_device_info(host_mac, mac);
                     bluez_trust_device(mac);
                     nextSubStatus = BluetoothPairDeviceState::deviceScan;
                 }
@@ -588,6 +665,7 @@ static void AsyncBluetoothPairDeviceThreadFunction(BluetoothPairDeviceState *sta
         if (nextSubStatus == BluetoothPairDeviceState::success ||
             nextSubStatus == BluetoothPairDeviceState::failed)
         {
+            bluez_restore_adapter(was_discoverable);
             isCompleted = true;
         }
     }
