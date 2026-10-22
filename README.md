@@ -6,6 +6,10 @@ Designed for headless Linux servers or standard PC running PS3 Eye cameras.
 
 ---
 
+## Check latest branch with test working bluez controller pairing!
+
+---
+
 ## Patches & Fixes
 
 * **Linux PS3 Eye Driver:** Re-enabled `HAVE_PS3EYE` and `PS3EYEDriver` build paths previously restricted to Windows/macOS.
@@ -22,3 +26,4 @@ Designed for headless Linux servers or standard PC running PS3 Eye cameras.
 git clone <repo-url>
 cd <repo-dir>
 makepkg -srci
+```
