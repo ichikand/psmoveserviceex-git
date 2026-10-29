@@ -1,0 +1,26 @@
+pkgbase = psmoveserviceex-git
+	pkgdesc = PS Move Service Ex - Modernized C++17 fork with systemd, udev and BlueZ support
+	pkgver = r1.a196b8a
+	pkgrel = 1
+	url = https://github.com/ichikand/PSMoveServiceEx
+	arch = x86_64
+	license = Apache-2.0
+	makedepends = git
+	makedepends = cmake
+	makedepends = boost
+	makedepends = protobuf
+	makedepends = glm
+	makedepends = eigen
+	depends = boost-libs
+	depends = opencv
+	depends = sdl2
+	depends = libusb
+	depends = bluez-libs
+	depends = systemd-libs
+	provides = psmoveserviceex
+	conflicts = psmoveserviceex
+	conflicts = psmoveservice
+	source = git+https://github.com/ichikand/PSMoveServiceEx.git#branch=linux-cxx17-modernization
+	sha256sums = SKIP
+
+pkgname = psmoveserviceex-git
