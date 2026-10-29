@@ -36,7 +36,7 @@ pkgver() {
 
 prepare() {
   cd "$srcdir/PSMoveServiceEx"
-  git submodule update --init --recursive
+  git submodule update --init --recursive --depth 1 -j"$(nproc)"
 }
 
 build() {
@@ -53,7 +53,18 @@ package() {
   cd "PSMoveServiceEx"
 
   install -Dm755 "../build/src/psmoveservice/PSMoveService" "$pkgdir/usr/bin/PSMoveService"
-  install -Dm755 "../build/src/psmoveconfigtool/PSMoveConfigTool" "$pkgdir/usr/bin/PSMoveConfigTool"
+  install -Dm755 "../build/src/psmoveconfigtool/PSMoveConfigTool" "$pkgdir/usr/lib/psmoveserviceex/PSMoveConfigTool"
+
+  install -d "$pkgdir/usr/share/psmoveserviceex"
+  cp -r src/psmoveconfigtool/assets "$pkgdir/usr/share/psmoveserviceex/" 2>/dev/null || cp -r assets "$pkgdir/usr/share/psmoveserviceex/"
+
+  install -d "$pkgdir/usr/bin"
+  cat <<'EOF' > "$pkgdir/usr/bin/PSMoveConfigTool"
+#!/bin/sh
+cd /usr/share/psmoveserviceex
+exec /usr/lib/psmoveserviceex/PSMoveConfigTool "$@"
+EOF
+  chmod 755 "$pkgdir/usr/bin/PSMoveConfigTool"
 
   install -Dm755 "../build/src/psmoveclient/libPSMoveClient_CAPI.so" "$pkgdir/usr/lib/libPSMoveClient_CAPI.so"
 
