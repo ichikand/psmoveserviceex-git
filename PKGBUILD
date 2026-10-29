@@ -11,6 +11,8 @@ depends=(
   'opencv'
   'sdl2'
   'libusb'
+  'bluez'
+  'bluez-utils'
   'bluez-libs'
   'systemd-libs'
 )
@@ -32,6 +34,11 @@ pkgver() {
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
+prepare() {
+  cd "$srcdir/PSMoveServiceEx"
+  git submodule update --init --recursive
+}
+
 build() {
   cmake -B build -S "PSMoveServiceEx" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -51,8 +58,10 @@ package() {
   install -Dm755 "../build/src/psmoveclient/libPSMoveClient_CAPI.so" "$pkgdir/usr/lib/libPSMoveClient_CAPI.so"
 
   install -Dm644 "misc/linux/99-pseye-exclusive.rules" "$pkgdir/usr/lib/udev/rules.d/99-pseye-exclusive.rules"
+  install -Dm644 "misc/linux/50-psmoveservice-bluetooth.rules" "$pkgdir/usr/share/polkit-1/rules.d/50-psmoveservice-bluetooth.rules"
   install -Dm644 "misc/linux/psmoveservice.sysusers" "$pkgdir/usr/lib/sysusers.d/psmoveservice.conf"
   install -Dm644 "misc/linux/psmoveservice.service" "$pkgdir/usr/lib/systemd/system/psmoveservice.service"
+  install -Dm644 "misc/linux/psmoveservice.conf" "$pkgdir/usr/lib/tmpfiles.d/psmoveservice.conf"
 
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
