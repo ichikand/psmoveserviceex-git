@@ -11,9 +11,9 @@ depends=(
   'opencv'
   'sdl2'
   'libusb'
+  'glib2'
   'bluez'
   'bluez-utils'
-  'bluez-libs'
   'systemd-libs'
 )
 makedepends=(
@@ -73,6 +73,7 @@ EOF
   install -Dm644 "misc/linux/psmoveservice.sysusers" "$pkgdir/usr/lib/sysusers.d/psmoveservice.conf"
   install -Dm644 "misc/linux/psmoveservice.service" "$pkgdir/usr/lib/systemd/system/psmoveservice.service"
   install -Dm644 "misc/linux/psmoveservice.conf" "$pkgdir/usr/lib/tmpfiles.d/psmoveservice.conf"
+  install -Dm644 "misc/linux/org.psmoveservice.conf" "$pkgdir/usr/share/dbus-1/system.d/org.psmoveservice.conf"
 
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
